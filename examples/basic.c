@@ -15,8 +15,7 @@
 
 #define TEXT L"The quick brown fox jumps over the lazy dog. "
 //#define FONT "/usr/share/fonts/fantasque-sans-mono/FantasqueSansMono-Regular.otf:16"
-#define FONT "/usr/share/fonts/inconsolata/Inconsolata-Regular.ttf:16;" \
-             "/usr/share/fonts/powerline-symbols/PowerlineSymbols.otf:14"
+#define FONT "/usr/share/fonts/TTF/LiberationMono-Regular.ttf:48"
 //#define FONT "/usr/share/fonts/libertine/LinLibertine_R.otf:16"
 
 Display *dpy;
