@@ -1,6 +1,5 @@
 /* See LICENSE file for copyright and license details. */
 
-#include <errno.h>
 
 #include <xcb/xcb.h>
 #include <xcb/render.h>
@@ -75,7 +74,7 @@ dt_init(dt_context **res, xcb_connection_t *dis, xcb_window_t win)
     xcb_pixmap_t pix;
 
     if (!(ctx = malloc(sizeof(*ctx))))
-        return -ENOMEM;
+        return -1;
 
     if ((err = FT_Init_FreeType(&ctx->ft_lib))) {
         free(ctx);
@@ -134,7 +133,7 @@ dt_load(dt_context *ctx, dt_font **res, char const *name)
     int16_t descent;
 
     if (!(fnt = malloc(sizeof(*fnt))))
-        return -ENOMEM;
+        return -1;
 
     fnt->num_faces = 1;
     for (i = 0; name[i]; ++i)
@@ -142,12 +141,12 @@ dt_load(dt_context *ctx, dt_font **res, char const *name)
 
     if (!(fnt->faces = malloc(fnt->num_faces * sizeof(fnt->faces[0])))) {
         free(fnt);
-        return -ENOMEM;
+        return -1;
     }
     for (i = 0; i < fnt->num_faces; ++i) {
         len = strchr(name, ';') - name;
         if (!(face = strndup(name, len)))
-            return -ENOMEM;
+            return -1;
         if ((err = load_face(ctx, &fnt->faces[i], face))) {
             free(face);
             while (--i != (size_t) -1)
@@ -247,10 +246,10 @@ load_face(dt_context *ctx, FT_Face *face, char const *name) {
     size_t size;
 
     if (!(colon = strchr(name, ':')))
-        return -EINVAL;
+        return -1;
 
     if (!(file = strndup(name, colon - name)))
-        return -ENOMEM;
+        return -1;
     err = FT_New_Face(ctx->ft_lib, file, 0, face);
     free(file);
     if (err)
@@ -308,7 +307,7 @@ load_char(dt_context *ctx, dt_font *fnt, char c)
     g.y_off = slot->advance.y >> 6;
 
     if (!(img = malloc(4 * g.width * g.height)))
-        return -ENOMEM;
+        return -1;
     for (y = 0; y < g.height; ++y)
         for (x = 0; x < g.width; ++x)
             for (i = 0; i < 4; ++i)
@@ -361,7 +360,7 @@ hash_set(dt_row map[DT_HASH_SIZE], dt_pair val)
     if (row.allocated == row.len) {
         d = row.data;
         if (!(d = realloc(d, (2 * row.len + 1) * sizeof(d[0]))))
-            return -ENOMEM;
+            return -1;
         row.data = d;
         row.allocated = 2 * row.len + 1;
     }
