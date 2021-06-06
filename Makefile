@@ -1,16 +1,30 @@
-# See LICENSE file for copyright and license details.
+FT_CFLAGS  = `freetype-config --cflags`
+FT_LDFLAGS = `freetype-config --libs`
 
-include config.mk
+XLIB_LDFLAGS = -lxcb -lxcb-render -lxcb-render-util
+
+CFLAGS  += -std=c99 ${FT_CFLAGS} -Wall -Wextra -pedantic
+LDFLAGS += ${XLIB_LDFLAGS} ${FT_LDFLAGS}
 
 EXECS := $(patsubst examples/%.c,build/%,$(wildcard examples/*.c))
 
-all: $(EXECS)
+all: libdtext.so
 
-build/%: examples/%.c dtext.c dtext.h config.mk Makefile
-	[ -d build ] || mkdir build
+libdtext.so: dtext.c
+	${CC} ${CFLAGS} -fPIC -shared -o $@ $^ ${CFLAGS} ${LDFLAGS}
+
+install: libdtext.so
+	install -Dt $(DESTDIR)/usr/lib/ $^
+
+examples: $(EXECS)
+
+build:
+	mkdir build
+
+build/%: examples/%.c dtext.c dtext.h | build
 	${CC} -I. ${CFLAGS} ${LDFLAGS} $< dtext.c -o $@
 
 clean:
-	rm -f $(EXECS)
+	rm -f $(EXECS) *.so
 
 .PHONY: all clean
