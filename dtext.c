@@ -3,12 +3,14 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <ft2build.h>
+#include <xcb/xcb.h>
+#include <xcb/render.h>
+#include <xcb/xcb_renderutil.h>
+#include <X11/extensions/Xrender.h>
+
+#include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
 #include FT_ADVANCES_H
-
-#include <X11/Xlib.h>
-#include <X11/extensions/Xrender.h>
 
 #include "dtext.h"
 
@@ -23,13 +25,12 @@ static dt_pair const *hash_get(dt_row map[DT_HASH_SIZE], wchar_t key);
 static dt_error hash_set(dt_row map[DT_HASH_SIZE], dt_pair val);
 
 dt_error
-dt_init(dt_context **res, Display *dpy, Window win)
+dt_init(dt_context **res, xcb_connection_t *dis, xcb_window_t win)
 {
 	dt_error err;
 	dt_context *ctx;
-	Visual *visual;
-	Pixmap pix;
-	XRenderPictureAttributes attrs;
+	xcb_visualid_t visual;
+	xcb_pixmap_t pix;
 
 	if (!(ctx = malloc(sizeof(*ctx))))
 		return -ENOMEM;
@@ -39,19 +40,33 @@ dt_init(dt_context **res, Display *dpy, Window win)
 		return err;
 	}
 
-	visual = XDefaultVisual(dpy, XDefaultScreen(dpy));
-	ctx->win_format = XRenderFindVisualFormat(dpy, visual);
-	XFree(visual);
-	ctx->argb32_format = XRenderFindStandardFormat(dpy, PictStandardARGB32);
+	xcb_screen_iterator_t iter = xcb_setup_roots_iterator (xcb_get_setup (dis));
+	xcb_screen_t* screen = iter.data;
 
-	ctx->dpy = dpy;
-	ctx->pic = XRenderCreatePicture(dpy, win, ctx->win_format, 0, &attrs);
 
-	pix = XCreatePixmap(dpy, DefaultRootWindow(dpy), 1, 1, 32);
-	attrs.repeat = 1;
-	ctx->fill = XRenderCreatePicture(ctx->dpy, pix, ctx->argb32_format,
-	                                 CPRepeat, &attrs);
-	XFreePixmap(dpy, pix);
+	ctx->dis = dis;
+	ctx->pic = xcb_generate_id(dis);
+
+	visual = screen->root_visual;
+
+	xcb_render_query_pict_formats_reply_t* reply;
+	reply = xcb_render_query_pict_formats_reply(dis, xcb_render_query_pict_formats(dis), NULL);
+	xcb_render_pictvisual_t*  pictvisual;
+	pictvisual = xcb_render_util_find_visual_format(reply, visual);
+
+	ctx->win_format = pictvisual ? pictvisual->format: 0;
+
+	xcb_render_create_picture(dis, ctx->pic, win, ctx->win_format, 0, NULL);
+
+	xcb_render_pictforminfo_t* pictforminfo = xcb_render_util_find_standard_format(reply, XCB_PICT_STANDARD_ARGB_32);
+	ctx->argb32_format = pictforminfo ? pictforminfo->id: 0 ;
+	pix = xcb_generate_id(dis);
+	xcb_create_pixmap(dis, 32, pix , screen->root, 1, 1);
+	uint32_t values = XCB_RENDER_REPEAT_NORMAL;
+
+	ctx->fill = xcb_generate_id(dis);
+	xcb_render_create_picture(dis, ctx->fill, pix, ctx->argb32_format, XCB_RENDER_CP_REPEAT, &values);
+	xcb_free_pixmap(dis, pix);
 
 	*res = ctx;
 	return 0;
@@ -60,14 +75,9 @@ dt_init(dt_context **res, Display *dpy, Window win)
 void
 dt_quit(dt_context *ctx)
 {
-	XRenderFreePicture(ctx->dpy, ctx->fill);
-	XRenderFreePicture(ctx->dpy, ctx->pic);
-
-	XFree(ctx->argb32_format);
-	XFree(ctx->win_format);
-
+	xcb_render_free_picture(ctx->dis, ctx->pic);
+	xcb_render_free_picture(ctx->dis, ctx->fill);
 	FT_Done_FreeType(ctx->ft_lib);
-
 	free(ctx);
 }
 
@@ -108,7 +118,9 @@ dt_load(dt_context *ctx, dt_font **res, char const *name)
 		name += len + 1;
 	}
 
-	fnt->gs = XRenderCreateGlyphSet(ctx->dpy, ctx->argb32_format);
+
+	fnt->gs = xcb_generate_id(ctx->dis);
+	xcb_render_create_glyph_set(ctx->dis, fnt->gs, ctx->argb32_format);
 	memset(fnt->advance, 0, sizeof(fnt->advance));
 
 	fnt->ascent = descent = 0;
@@ -127,7 +139,7 @@ dt_free(dt_context *ctx, dt_font *fnt)
 {
 	size_t i;
 
-	XRenderFreeGlyphSet(ctx->dpy, fnt->gs);
+	xcb_render_free_glyph_set(ctx->dis, fnt->gs);
 
 	for (i = 0; i < fnt->num_faces; ++i)
 		FT_Done_Face(fnt->faces[i]);
@@ -137,7 +149,7 @@ dt_free(dt_context *ctx, dt_font *fnt)
 
 dt_error
 dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
-       wchar_t const *txt, size_t len)
+	   wchar_t const *txt, size_t len)
 {
 	dt_error err;
 	size_t i;
@@ -159,34 +171,28 @@ dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
 
 dt_error
 dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
-        uint32_t x, uint32_t y, wchar_t const *txt, size_t len)
+		uint32_t x, uint32_t y, wchar_t const *txt, size_t len)
 {
 	dt_error err;
-	XRenderColor col;
+	xcb_render_color_t col;
 	size_t i;
 
 	col.red   = (color->red   << 8) + color->red;
 	col.green = (color->green << 8) + color->green;
 	col.blue  = (color->blue  << 8) + color->blue;
 	col.alpha = (color->alpha << 8) + color->alpha;
-	XRenderFillRectangle(ctx->dpy, PictOpSrc, ctx->fill, &col, 0, 0, 1, 1);
+	xcb_rectangle_t rect ={0, 0, 1, 1};
+	xcb_render_fill_rectangles(ctx->dis, XCB_RENDER_PICT_OP_SRC, ctx->fill, col, 1, &rect);
 
 	for (i = 0; i < len; ++i)
 		if ((err = load_char(ctx, fnt, txt[i])))
 			return err;
 
-#define DO_COMPOSITE(Size, Type) \
-	XRenderCompositeString ## Size(ctx->dpy, PictOpOver, ctx->fill, \
-	                               ctx->pic, ctx->argb32_format, \
-	                               fnt->gs, 0, 0, x, y, \
-	                               (Type const *) txt, len)
-	if (sizeof(wchar_t) == 1)
-		DO_COMPOSITE(8, char);
-	else if (sizeof(wchar_t) == 2)
-		DO_COMPOSITE(16, uint16_t);
-	else
-		DO_COMPOSITE(32, uint32_t);
-#undef DO_COMPOSITE
+	xcb_render_util_composite_text_stream_t* stream = xcb_render_util_composite_text_stream(fnt->gs, len, 0);
+	xcb_render_util_glyphs_32(stream, x, y, len, txt);
+	xcb_render_util_composite_text(ctx->dis, XCB_RENDER_PICT_OP_OVER, ctx->fill, ctx->pic, ctx->argb32_format, 0, 0, stream);
+	xcb_render_util_composite_text_free(stream);
+
 
 	return 0;
 }
@@ -225,8 +231,8 @@ load_char(dt_context *ctx, dt_font *fnt, wchar_t c)
 	dt_error err;
 	FT_UInt code;
 	FT_GlyphSlot slot;
-	Glyph gid;
-	XGlyphInfo g;
+	xcb_render_glyph_t gid;
+	xcb_render_glyphinfo_t g;
 	char *img;
 	size_t x, y, i;
 
@@ -255,9 +261,9 @@ load_char(dt_context *ctx, dt_font *fnt, wchar_t c)
 	g.width  = slot->bitmap.width;
 	g.height = slot->bitmap.rows;
 	g.x = - slot->bitmap_left;
-	g.y =   slot->bitmap_top;
-	g.xOff = slot->advance.x >> 6;
-	g.yOff = slot->advance.y >> 6;
+	g.y =	slot->bitmap_top;
+	g.x_off = slot->advance.x >> 6;
+	g.y_off = slot->advance.y >> 6;
 
 	if (!(img = malloc(4 * g.width * g.height)))
 		return -ENOMEM;
@@ -267,8 +273,8 @@ load_char(dt_context *ctx, dt_font *fnt, wchar_t c)
 				img[4 * (y * g.width + x) + i] =
 					slot->bitmap.buffer[y * g.width + x];
 
-	XRenderAddGlyphs(ctx->dpy, fnt->gs, &gid, &g, 1,
-	                 img, 4 * g.width * g.height);
+	xcb_render_add_glyphs(ctx->dis, fnt->gs, 1, &gid, &g,
+					 4 * g.width * g.height, img);
 
 	free(img);
 

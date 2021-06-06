@@ -4,23 +4,25 @@
 #include <stdint.h>
 #include <wchar.h>
 
-#include <X11/Xlib.h>
-#include <X11/keysym.h>
-#include <X11/extensions/Xrender.h>
-
-#include <ft2build.h>
+#include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
+#include FT_ADVANCES_H
+#include <xcb/xcb.h>
+#include <xcb/render.h>
+#include <xcb/xcb_renderutil.h>
 
-#include "dtext.h"
+#include "../dtext.h"
 
 #define TEXT L"The quick brown fox jumps over the lazy dog. "
 //#define FONT "/usr/share/fonts/fantasque-sans-mono/FantasqueSansMono-Regular.otf:16"
 #define FONT "/usr/share/fonts/TTF/LiberationMono-Regular.ttf:48"
 //#define FONT "/usr/share/fonts/libertine/LinLibertine_R.otf:16"
 
-Display *dpy;
-Window win;
-GC gc;
+xcb_connection_t *dis;
+xcb_window_t root;
+xcb_window_t win;
+xcb_gcontext_t gc;
+
 
 dt_context *ctx;
 dt_font *fnt;
@@ -33,61 +35,50 @@ static void draw();
 
 int main()
 {
-	XEvent evt;
-
-	_Xdebug = 1;
-
 	setup_x();
-
-	assert(!dt_init(&ctx, dpy, win));
+	assert(!dt_init(&ctx, dis, win));
 	assert(!dt_load(ctx, &fnt, FONT));
 	setup_dt();
 
 	draw();
 
-	XSelectInput(dpy, win, ExposureMask | KeyPressMask);
-	while (1) {
-		XNextEvent(dpy, &evt);
-		switch (evt.type) {
-		case Expose:
-			draw();
-			break;
-		case KeyPress:
-			if (XLookupKeysym(&evt.xkey, 0) == XK_Escape)
-				return 0;
-			break;
-		}
+	xcb_generic_event_t* event;
+	while((event=xcb_wait_for_event(dis))) {
+		draw();
+		free(event);
 	}
 
 	dt_free(ctx, fnt);
 	dt_quit(ctx);
-	XCloseDisplay(dpy);
+	xcb_disconnect(dis);
 }
 
 static void setup_x()
 {
-	unsigned long white, black;
+	dis = xcb_connect(NULL, NULL);
+	xcb_screen_iterator_t iter = xcb_setup_roots_iterator (xcb_get_setup (dis));
+	xcb_screen_t* screen = iter.data;
+	root = screen->root;
 
-	dpy = XOpenDisplay(NULL);
+	win = xcb_generate_id(dis);
+	uint32_t mask[] = {XCB_EVENT_MASK_EXPOSURE};
+	xcb_create_window(dis, XCB_COPY_FROM_PARENT, win, screen->root, 0, 0, 500, 500, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
+			XCB_CW_EVENT_MASK, &mask );
+	xcb_map_window(dis, win);
 
-	white = XWhitePixel(dpy, DefaultScreen(dpy));
-	black = XBlackPixel(dpy, DefaultScreen(dpy));
 
-	win = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0,
-	                          700, 500, 0, white, white);
-	XMapWindow(dpy, win);
-
-	gc = XDefaultGC(dpy, 0);
-	XSetForeground(dpy, gc, black);
+	gc = xcb_generate_id(dis);
+	xcb_create_gc (dis, gc, win, XCB_GC_FOREGROUND, &screen->white_pixel);
 }
 
 static void setup_dt()
 {
 	memset(&color, 0, sizeof(color));
+	color.blue = 0xFF;
 	color.alpha = 0xFF;
 	memset(&color_inv, 0, sizeof(color_inv));
 	color_inv.red = 0xFF;
-	color_inv.green = 0xFF;
+	color_inv.green = 0x00;
 	color_inv.blue = 0xFF;
 	color_inv.alpha = 0xFF;
 }
@@ -99,11 +90,12 @@ static void draw()
 	assert(!dt_draw(ctx, fnt, &color, 10, 50, TEXT, wcslen(TEXT)));
 
 	assert(!dt_box(ctx, fnt, &bbox, TEXT, wcslen(TEXT)));
-	XFillRectangle(dpy, win, gc, 10 + bbox.x, 100 + bbox.y, bbox.w, bbox.h);
+
+	xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 100 + bbox.y, bbox.w, bbox.h}});
 	assert(!dt_draw(ctx, fnt, &color_inv, 10, 100, TEXT, wcslen(TEXT)));
 
-	XFillRectangle(dpy, win, gc, 10 + bbox.x, 150 - fnt->ascent, bbox.w, fnt->height);
+	xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 150 - fnt->ascent, bbox.w, fnt->height}});
 	assert(!dt_draw(ctx, fnt, &color_inv, 10, 150, TEXT, wcslen(TEXT)));
 
-	XFlush(dpy);
+	xcb_flush(dis);
 }

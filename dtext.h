@@ -5,12 +5,13 @@ typedef int32_t dt_error;
 typedef struct {
 	FT_Library ft_lib;
 
-	XRenderPictFormat *win_format;
-	XRenderPictFormat *argb32_format;
+    xcb_render_pictformat_t win_format;
+    xcb_render_pictformat_t argb32_format;
 
-	Display *dpy;
-	Picture pic;
-	Picture fill;
+	xcb_connection_t* dis;
+
+	xcb_render_picture_t pic;
+	xcb_render_picture_t fill;
 } dt_context;
 
 typedef struct {
@@ -34,7 +35,7 @@ typedef struct {
 	FT_Face *faces;
 	size_t num_faces;
 
-	GlyphSet gs;
+	xcb_render_glyphset_t gs;
 	dt_row advance[DT_HASH_SIZE];
 } dt_font;
 
@@ -53,7 +54,7 @@ typedef struct {
 	uint8_t alpha; // 0 means opaque
 } dt_color;
 
-dt_error dt_init(dt_context **ctx, Display *dpy, Window win);
+dt_error dt_init(dt_context **ctx, xcb_connection_t *dpy, xcb_window_t win);
 void dt_quit(dt_context *ctx);
 
 dt_error dt_load(dt_context *ctx, dt_font **fnt, char const *name);
