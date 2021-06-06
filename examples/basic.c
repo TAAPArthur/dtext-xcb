@@ -14,6 +14,7 @@
 #include "../dtext.h"
 
 #define TEXT "The quick brown fox jumps over the lazy dog. "
+#define TEXT2 "A\nB\nC\nD\nE\nF"
 //#define FONT "/usr/share/fonts/fantasque-sans-mono/FantasqueSansMono-Regular.otf:16"
 #define FONT "/usr/share/fonts/TTF/LiberationMono-Regular.ttf:48"
 //#define FONT "/usr/share/fonts/libertine/LinLibertine_R.otf:16"
@@ -96,5 +97,9 @@ static void draw()
 
     xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 150 - get_font_ascent(fnt), bbox.w, get_font_height(fnt)}});
     assert(!dt_draw(ctx, fnt, &color_inv, 10, 150, TEXT, strlen(TEXT)));
+
+    char buffer[32] = TEXT2;
+    int num_lines = word_wrap(buffer);
+    dt_draw_all_lines(ctx, fnt, &color_inv, 10, 200, 10, buffer, num_lines);
     xcb_flush(dis);
 }

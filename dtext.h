@@ -40,4 +40,8 @@ dt_error dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
                  uint32_t x, uint32_t y, char const *txt, size_t len);
 
 
+int word_wrap(char *txt);
+
+void dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
+        uint32_t x, uint32_t starting_y, uint32_t padding, char const *lines, int num_lines);
 #endif
