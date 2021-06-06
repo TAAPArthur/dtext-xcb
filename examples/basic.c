@@ -13,7 +13,7 @@
 
 #include "../dtext.h"
 
-#define TEXT L"The quick brown fox jumps over the lazy dog. "
+#define TEXT "The quick brown fox jumps over the lazy dog. "
 //#define FONT "/usr/share/fonts/fantasque-sans-mono/FantasqueSansMono-Regular.otf:16"
 #define FONT "/usr/share/fonts/TTF/LiberationMono-Regular.ttf:48"
 //#define FONT "/usr/share/fonts/libertine/LinLibertine_R.otf:16"
@@ -87,15 +87,14 @@ static void draw()
 {
     dt_bbox bbox;
 
-    assert(!dt_draw(ctx, fnt, &color, 10, 50, TEXT, wcslen(TEXT)));
+    assert(!dt_draw(ctx, fnt, &color, 10, 50, TEXT, strlen(TEXT)));
 
-    assert(!dt_box(ctx, fnt, &bbox, TEXT, wcslen(TEXT)));
+    assert(!dt_box(ctx, fnt, &bbox, TEXT, strlen(TEXT)));
 
     xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 100 + bbox.y, bbox.w, bbox.h}});
-    assert(!dt_draw(ctx, fnt, &color_inv, 10, 100, TEXT, wcslen(TEXT)));
+    assert(!dt_draw(ctx, fnt, &color_inv, 10, 100, TEXT, strlen(TEXT)));
 
     xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 150 - fnt->ascent, bbox.w, fnt->height}});
-    assert(!dt_draw(ctx, fnt, &color_inv, 10, 150, TEXT, wcslen(TEXT)));
-
+    assert(!dt_draw(ctx, fnt, &color_inv, 10, 150, TEXT, strlen(TEXT)));
     xcb_flush(dis);
 }

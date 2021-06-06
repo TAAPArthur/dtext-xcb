@@ -18,10 +18,10 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
 static dt_error load_face(dt_context *ctx, FT_Face *face, char const *name);
-static dt_error load_char(dt_context *ctx, dt_font *fnt, wchar_t c);
+static dt_error load_char(dt_context *ctx, dt_font *fnt, char c);
 
 static dt_pair hash_unavailable = { 0 };
-static dt_pair const *hash_get(dt_row map[DT_HASH_SIZE], wchar_t key);
+static dt_pair const *hash_get(dt_row map[DT_HASH_SIZE], char key);
 static dt_error hash_set(dt_row map[DT_HASH_SIZE], dt_pair val);
 
 dt_error
@@ -149,7 +149,7 @@ dt_free(dt_context *ctx, dt_font *fnt)
 
 dt_error
 dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
-       wchar_t const *txt, size_t len)
+       char const *txt, size_t len)
 {
     dt_error err;
     size_t i;
@@ -171,7 +171,7 @@ dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
 
 dt_error
 dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
-        uint32_t x, uint32_t y, wchar_t const *txt, size_t len)
+        uint32_t x, uint32_t y, char const *txt, size_t len)
 {
     dt_error err;
     xcb_render_color_t col;
@@ -189,7 +189,7 @@ dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
             return err;
 
     xcb_render_util_composite_text_stream_t* stream = xcb_render_util_composite_text_stream(fnt->gs, len, 0);
-    xcb_render_util_glyphs_32(stream, x, y, len, txt);
+    xcb_render_util_glyphs_8(stream, x, y, len, txt);
     xcb_render_util_composite_text(ctx->dis, XCB_RENDER_PICT_OP_OVER, ctx->fill, ctx->pic, ctx->argb32_format, 0, 0, stream);
     xcb_render_util_composite_text_free(stream);
 
@@ -226,7 +226,7 @@ load_face(dt_context *ctx, FT_Face *face, char const *name) {
 
 
 static dt_error
-load_char(dt_context *ctx, dt_font *fnt, wchar_t c)
+load_char(dt_context *ctx, dt_font *fnt, char c)
 {
     dt_error err;
     FT_UInt code;
@@ -287,7 +287,7 @@ load_char(dt_context *ctx, dt_font *fnt, wchar_t c)
 }
 
 static dt_pair const *
-hash_get(dt_row map[DT_HASH_SIZE], wchar_t key)
+hash_get(dt_row map[DT_HASH_SIZE], char key)
 {
     dt_row row;
     size_t i;

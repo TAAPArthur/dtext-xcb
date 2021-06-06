@@ -15,7 +15,7 @@ typedef struct {
 } dt_context;
 
 typedef struct {
-	wchar_t c;  // char
+	uint8_t c;  // char
 	uint16_t adv; // advance
 	int16_t asc; // ascender
 	uint16_t h; // height
@@ -61,6 +61,6 @@ dt_error dt_load(dt_context *ctx, dt_font **fnt, char const *name);
 void dt_free(dt_context *ctx, dt_font *fnt);
 
 dt_error dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
-                wchar_t const *txt, size_t len);
+                char const *txt, size_t len);
 dt_error dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
-                 uint32_t x, uint32_t y, wchar_t const *txt, size_t len);
+                 uint32_t x, uint32_t y, char const *txt, size_t len);
