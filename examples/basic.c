@@ -94,7 +94,7 @@ static void draw()
     xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 100 + bbox.y, bbox.w, bbox.h}});
     assert(!dt_draw(ctx, fnt, &color_inv, 10, 100, TEXT, strlen(TEXT)));
 
-    xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 150 - fnt->ascent, bbox.w, fnt->height}});
+    xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 150 - get_font_ascent(fnt), bbox.w, get_font_height(fnt)}});
     assert(!dt_draw(ctx, fnt, &color_inv, 10, 150, TEXT, strlen(TEXT)));
     xcb_flush(dis);
 }

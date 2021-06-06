@@ -6,11 +6,12 @@ XLIB_LDFLAGS = -lxcb -lxcb-render -lxcb-render-util
 CFLAGS  += -std=c99 ${FT_CFLAGS} -Wall -Wextra -pedantic
 LDFLAGS += ${XLIB_LDFLAGS} ${FT_LDFLAGS}
 
+SRCS := $(wildcard *.c)
 EXECS := $(patsubst examples/%.c,build/%,$(wildcard examples/*.c))
 
 all: libdtext.so
 
-libdtext.so: dtext.c
+libdtext.so: $(wildcard *.c)
 	${CC} ${CFLAGS} -fPIC -shared -o $@ $^ ${CFLAGS} ${LDFLAGS}
 
 install: libdtext.so
@@ -21,8 +22,9 @@ examples: $(EXECS)
 build:
 	mkdir build
 
-build/%: examples/%.c dtext.c dtext.h | build
-	${CC} -I. ${CFLAGS} ${LDFLAGS} $< dtext.c -o $@
+
+build/%: examples/%.c $(SRCS)  | build
+	${CC} -I. ${CFLAGS} -g ${LDFLAGS} $^ -o $@
 
 clean:
 	rm -f $(EXECS) *.so

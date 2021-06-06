@@ -1,14 +1,12 @@
 /* See LICENSE file for copyright and license details. */
 
 #include <errno.h>
-#include <stdint.h>
 
 #include <xcb/xcb.h>
 #include <xcb/render.h>
 #include <xcb/xcb_renderutil.h>
-#include <X11/extensions/Xrender.h>
-
 #include <freetype2/ft2build.h>
+#include <xcb/render.h>
 #include FT_FREETYPE_H
 #include FT_ADVANCES_H
 
@@ -16,6 +14,50 @@
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
+
+typedef struct dt_context {
+	FT_Library ft_lib;
+
+    xcb_render_pictformat_t win_format;
+    xcb_render_pictformat_t argb32_format;
+
+	xcb_connection_t* dis;
+
+	xcb_render_picture_t pic;
+	xcb_render_picture_t fill;
+} dt_context;
+
+typedef struct {
+	uint8_t c;  // char
+	uint16_t adv; // advance
+	int16_t asc; // ascender
+	uint16_t h; // height
+} dt_pair;
+
+typedef struct {
+	dt_pair *data;
+	size_t len;
+	size_t allocated;
+} dt_row;
+
+#define DT_HASH_SIZE 128
+typedef struct dt_font {
+	uint16_t height;
+	uint16_t ascent;
+
+	FT_Face *faces;
+	size_t num_faces;
+
+	xcb_render_glyphset_t gs;
+	dt_row advance[DT_HASH_SIZE];
+} dt_font;
+
+uint16_t get_font_ascent(dt_font* font) {
+    return font->ascent;
+}
+uint16_t get_font_height(dt_font* font) {
+    return font->height;
+}
 
 static dt_error load_face(dt_context *ctx, FT_Face *face, char const *name);
 static dt_error load_char(dt_context *ctx, dt_font *fnt, char c);
