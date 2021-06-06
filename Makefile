@@ -16,6 +16,7 @@ libdtext.so: $(wildcard *.c)
 
 install: libdtext.so
 	install -Dt $(DESTDIR)/usr/lib/ $^
+	install -Dt $(DESTDIR)/usr/include/dtext/ *.h
 
 examples: $(EXECS)
 
