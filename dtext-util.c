@@ -54,7 +54,7 @@ int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
     int cell_height = padding + get_font_ascent(fnt);
     const char*ptr = lines;
     for(int i=0;i<num_lines;i++) {
-        dt_draw(ctx, fnt, color, x, starting_y + cell_height * i, ptr, strlen(ptr));
+        dt_draw(ctx, fnt, color, x, starting_y + cell_height * (i+1), ptr, strlen(ptr));
         ptr = ptr + strlen(ptr) + 1;
     }
     return starting_y + cell_height * num_lines;
