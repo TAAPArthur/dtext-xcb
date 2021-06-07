@@ -188,6 +188,15 @@ dt_free(dt_context *ctx, dt_font *fnt)
     free(fnt);
 }
 
+int get_text_width(dt_context *ctx, dt_font *fnt, char const *txt, size_t len) {
+    uint32_t text_width = 0;
+    for (int i = 0; i < len; ++i) {
+        if ((load_char(ctx, fnt, txt[i])))
+            continue;
+        text_width += hash_get(fnt->advance, txt[i])->adv;
+    }
+    return text_width;
+}
 dt_error
 dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
        char const *txt, size_t len)

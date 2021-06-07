@@ -39,9 +39,33 @@ dt_error dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
 dt_error dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
                  uint32_t x, uint32_t y, char const *txt, size_t len);
 
+int get_text_width(dt_context *ctx, dt_font *fnt, char const *txt, size_t len);
 
-int word_wrap(char *txt);
+/**
+ * Splits txt into N lines by by total length
+ *
+ * Breaks up text into N lines such that strings are generally less than width pixels
+ * @return N, the new number of strings
+ */
+int word_wrap_n(dt_context *ctx, dt_font *fnt, char *txt, int num_lines, uint32_t width);
+/**
+ * Replace all instances of '\n' with \0.
+ *
+ * Split txt into N seperate string by replacing the new line marker
+ * with the null string.
+ * @return N, the new number of strings
+ */
+int split_lines(char *txt);
 
-void dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
+/**
+ * Splits txt into N lines by '\n' and by total length
+ *
+ * Breaks up text into N lines such that each human line is its own string
+ * and string are generally less than width pixels
+ * @return N, the new number of strings
+ */
+int word_wrap_line(dt_context *ctx, dt_font *fnt, char *txt, uint32_t width);
+
+int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
         uint32_t x, uint32_t starting_y, uint32_t padding, char const *lines, int num_lines);
 #endif

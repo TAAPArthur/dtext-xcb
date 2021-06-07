@@ -14,7 +14,7 @@
 #include "../dtext.h"
 
 #define TEXT "The quick brown fox jumps over the lazy dog. "
-#define TEXT2 "A\nB\nC\nD\nE\nF"
+#define TEXT2 "AAA\nBB\nC\nDD\nEEE\nFFFF"
 //#define FONT "/usr/share/fonts/fantasque-sans-mono/FantasqueSansMono-Regular.otf:16"
 #define FONT "/usr/share/fonts/TTF/LiberationMono-Regular.ttf:48"
 //#define FONT "/usr/share/fonts/libertine/LinLibertine_R.otf:16"
@@ -99,7 +99,11 @@ static void draw()
     assert(!dt_draw(ctx, fnt, &color_inv, 10, 150, TEXT, strlen(TEXT)));
 
     char buffer[32] = TEXT2;
-    int num_lines = word_wrap(buffer);
-    dt_draw_all_lines(ctx, fnt, &color_inv, 10, 200, 10, buffer, num_lines);
+    int num_lines = split_lines(buffer);
+    int offset = dt_draw_all_lines(ctx, fnt, &color_inv, 10, 200, 10, buffer, num_lines);
+
+    char buffer2[255] = TEXT;
+    num_lines = word_wrap_n(ctx, fnt, buffer2, 1, 400);
+    dt_draw_all_lines(ctx, fnt, &color_inv, 10, offset, 10, buffer2, num_lines);
     xcb_flush(dis);
 }
