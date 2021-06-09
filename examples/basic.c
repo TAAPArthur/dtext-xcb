@@ -83,7 +83,7 @@ static void draw() {
 int main() {
     setup_x();
     assert(!dt_init_context(&ctx, dis, win));
-    assert(!dt_load(dis, &fnt, FONT));
+    assert(!dt_load_font(dis, &fnt, FONT));
     setup_dt();
 
     draw();

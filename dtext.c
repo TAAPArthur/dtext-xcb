@@ -239,7 +239,7 @@ void dt_free_context(dt_context *ctx) {
     free(ctx);
 }
 
-dt_error dt_load(xcb_connection_t *dis, dt_font **res, char const *name) {
+dt_error dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name) {
     dt_error err;
     dt_font *fnt;
     size_t i;
