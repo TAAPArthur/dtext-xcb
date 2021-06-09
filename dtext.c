@@ -74,7 +74,6 @@ xcb_render_pictformat_t get_argb32_format(xcb_connection_t* dis) {
 static load_face(xcb_connection_t *dis, FT_Library* ft_lib, FT_Face *face, char const *name);
 static dt_error load_char(xcb_connection_t* dis, dt_font *fnt, char c);
 
-static dt_pair hash_unavailable = { 0 };
 static dt_pair const *hash_get(dt_row map[DT_HASH_SIZE], char key);
 static dt_error hash_set(dt_row map[DT_HASH_SIZE], dt_pair val);
 
@@ -299,7 +298,7 @@ load_char(xcb_connection_t* dis, dt_font *fnt, char c)
     char *img;
     size_t x, y, i;
 
-    if (hash_get(fnt->advance, c) != &hash_unavailable)
+    if (hash_get(fnt->advance, c))
         return 0;
 
     slot = 0;
@@ -360,7 +359,7 @@ hash_get(dt_row map[DT_HASH_SIZE], char key)
         if (row.data[i].c == key)
             return &row.data[i];
 
-    return &hash_unavailable;
+    return NULL;
 }
 
 static dt_error
