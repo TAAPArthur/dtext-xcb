@@ -15,10 +15,10 @@ int split_lines(char *txt) {
     return num_lines;
 }
 
-int word_wrap_n(dt_context *ctx, dt_font *fnt, char *txt, int num_lines, uint32_t width) {
+int word_wrap_n(xcb_connection_t*dis , dt_font *fnt, char *txt, int num_lines, uint32_t width) {
     char*ptr = txt;
     for(int i=0;i<num_lines;i++) {
-        if(get_text_width(ctx, fnt, ptr, strlen(ptr)) > width) {
+        if(get_text_width(dis, fnt, ptr, strlen(ptr)) > width) {
             char* whitespace = ptr;
             char* space = NULL;
             while(whitespace) {
@@ -26,7 +26,7 @@ int word_wrap_n(dt_context *ctx, dt_font *fnt, char *txt, int num_lines, uint32_
                 if(!space)
                     break;
                 int sublen = space - ptr;
-                if(get_text_width(ctx, fnt, ptr, sublen) > width)
+                if(get_text_width(dis, fnt, ptr, sublen) > width)
                     break;
                 whitespace = space;
             }
@@ -44,8 +44,8 @@ int word_wrap_n(dt_context *ctx, dt_font *fnt, char *txt, int num_lines, uint32_
     return num_lines;
 }
 
-int word_wrap_line(dt_context *ctx, dt_font *fnt, char *txt, uint32_t width) {
-    return word_wrap_n(ctx, fnt, txt, split_lines(txt), width);
+int word_wrap_line(xcb_connection_t*dis, dt_font *fnt, char *txt, uint32_t width) {
+    return word_wrap_n(dis, fnt, txt, split_lines(txt), width);
 }
 
 int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,

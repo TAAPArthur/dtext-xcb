@@ -15,12 +15,10 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
 typedef struct dt_context {
-	FT_Library ft_lib;
+	xcb_connection_t* dis;
 
     xcb_render_pictformat_t win_format;
-    xcb_render_pictformat_t argb32_format;
 
-	xcb_connection_t* dis;
 
 	xcb_render_picture_t pic;
 	xcb_render_picture_t fill;
@@ -39,11 +37,14 @@ typedef struct {
 	size_t allocated;
 } dt_row;
 
+
 #define DT_HASH_SIZE 128
 typedef struct dt_font {
 	uint16_t height;
 	uint16_t ascent;
 
+
+	FT_Library ft_lib;
 	FT_Face *faces;
 	size_t num_faces;
 
@@ -58,15 +59,27 @@ uint16_t get_font_height(dt_font* font) {
     return font->height;
 }
 
-static dt_error load_face(dt_context *ctx, FT_Face *face, char const *name);
-static dt_error load_char(dt_context *ctx, dt_font *fnt, char c);
+xcb_render_pictformat_t get_argb32_format(xcb_connection_t* dis) {
+    static xcb_render_pictformat_t argb32_format;
+    if(!argb32_format) {
+        xcb_render_query_pict_formats_reply_t* reply;
+        reply = xcb_render_query_pict_formats_reply(dis, xcb_render_query_pict_formats(dis), NULL);
+        xcb_render_pictforminfo_t* pictforminfo = xcb_render_util_find_standard_format(reply, XCB_PICT_STANDARD_ARGB_32);
+        argb32_format = pictforminfo ? pictforminfo->id: 0 ;
+        free(reply);
+    }
+    return argb32_format;
+}
+
+static load_face(xcb_connection_t *dis, FT_Library* ft_lib, FT_Face *face, char const *name);
+static dt_error load_char(xcb_connection_t* dis, dt_font *fnt, char c);
 
 static dt_pair hash_unavailable = { 0 };
 static dt_pair const *hash_get(dt_row map[DT_HASH_SIZE], char key);
 static dt_error hash_set(dt_row map[DT_HASH_SIZE], dt_pair val);
 
 dt_error
-dt_init(dt_context **res, xcb_connection_t *dis, xcb_window_t win)
+dt_init_context(dt_context **res, xcb_connection_t *dis, xcb_window_t win)
 {
     dt_error err;
     dt_context *ctx;
@@ -75,11 +88,6 @@ dt_init(dt_context **res, xcb_connection_t *dis, xcb_window_t win)
 
     if (!(ctx = malloc(sizeof(*ctx))))
         return -1;
-
-    if ((err = FT_Init_FreeType(&ctx->ft_lib))) {
-        free(ctx);
-        return err;
-    }
 
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator (xcb_get_setup (dis));
     xcb_screen_t* screen = iter.data;
@@ -94,19 +102,16 @@ dt_init(dt_context **res, xcb_connection_t *dis, xcb_window_t win)
     reply = xcb_render_query_pict_formats_reply(dis, xcb_render_query_pict_formats(dis), NULL);
     xcb_render_pictvisual_t*  pictvisual;
     pictvisual = xcb_render_util_find_visual_format(reply, visual);
-
     ctx->win_format = pictvisual ? pictvisual->format: 0;
-
+    free(reply);
     xcb_render_create_picture(dis, ctx->pic, win, ctx->win_format, 0, NULL);
 
-    xcb_render_pictforminfo_t* pictforminfo = xcb_render_util_find_standard_format(reply, XCB_PICT_STANDARD_ARGB_32);
-    ctx->argb32_format = pictforminfo ? pictforminfo->id: 0 ;
     pix = xcb_generate_id(dis);
     xcb_create_pixmap(dis, 32, pix , screen->root, 1, 1);
     uint32_t values = XCB_RENDER_REPEAT_NORMAL;
 
     ctx->fill = xcb_generate_id(dis);
-    xcb_render_create_picture(dis, ctx->fill, pix, ctx->argb32_format, XCB_RENDER_CP_REPEAT, &values);
+    xcb_render_create_picture(dis, ctx->fill, pix, get_argb32_format(dis), XCB_RENDER_CP_REPEAT, &values);
     xcb_free_pixmap(dis, pix);
 
     *res = ctx;
@@ -114,16 +119,17 @@ dt_init(dt_context **res, xcb_connection_t *dis, xcb_window_t win)
 }
 
 void
-dt_quit(dt_context *ctx)
+dt_free_context(dt_context *ctx)
 {
     xcb_render_free_picture(ctx->dis, ctx->pic);
     xcb_render_free_picture(ctx->dis, ctx->fill);
-    FT_Done_FreeType(ctx->ft_lib);
+
+
     free(ctx);
 }
 
 dt_error
-dt_load(dt_context *ctx, dt_font **res, char const *name)
+dt_load(xcb_connection_t *dis, dt_font **res, char const *name)
 {
     dt_error err;
     dt_font *fnt;
@@ -134,6 +140,11 @@ dt_load(dt_context *ctx, dt_font **res, char const *name)
 
     if (!(fnt = malloc(sizeof(*fnt))))
         return -1;
+
+    if ((err = FT_Init_FreeType(&fnt->ft_lib))) {
+        free(fnt);
+        return err;
+    }
 
     fnt->num_faces = 1;
     for (i = 0; name[i]; ++i)
@@ -147,7 +158,7 @@ dt_load(dt_context *ctx, dt_font **res, char const *name)
         len = strchr(name, ';') - name;
         if (!(face = strndup(name, len)))
             return -1;
-        if ((err = load_face(ctx, &fnt->faces[i], face))) {
+        if ((err = load_face(dis, &fnt->ft_lib, &fnt->faces[i], face))) {
             free(face);
             while (--i != (size_t) -1)
                 FT_Done_Face(fnt->faces[i]);
@@ -160,8 +171,8 @@ dt_load(dt_context *ctx, dt_font **res, char const *name)
     }
 
 
-    fnt->gs = xcb_generate_id(ctx->dis);
-    xcb_render_create_glyph_set(ctx->dis, fnt->gs, ctx->argb32_format);
+    fnt->gs = xcb_generate_id(dis);
+    xcb_render_create_glyph_set(dis, fnt->gs, get_argb32_format(dis));
     memset(fnt->advance, 0, sizeof(fnt->advance));
 
     fnt->ascent = descent = 0;
@@ -175,30 +186,32 @@ dt_load(dt_context *ctx, dt_font **res, char const *name)
     return 0;
 }
 
+
 void
-dt_free(dt_context *ctx, dt_font *fnt)
-{
+dt_free_font(xcb_connection_t *dis, dt_font *fnt) {
     size_t i;
 
-    xcb_render_free_glyph_set(ctx->dis, fnt->gs);
+    xcb_render_free_glyph_set(dis, fnt->gs);
 
     for (i = 0; i < fnt->num_faces; ++i)
         FT_Done_Face(fnt->faces[i]);
 
+    FT_Done_FreeType(fnt->ft_lib);
+
     free(fnt);
 }
 
-int get_text_width(dt_context *ctx, dt_font *fnt, char const *txt, size_t len) {
+int get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) {
     uint32_t text_width = 0;
     for (int i = 0; i < len; ++i) {
-        if ((load_char(ctx, fnt, txt[i])))
+        if ((load_char(dis, fnt, txt[i])))
             continue;
         text_width += hash_get(fnt->advance, txt[i])->adv;
     }
     return text_width;
 }
 dt_error
-dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
+dt_box(xcb_connection_t* dis, dt_font *fnt, dt_bbox *bbox,
        char const *txt, size_t len)
 {
     dt_error err;
@@ -208,7 +221,7 @@ dt_box(dt_context *ctx, dt_font *fnt, dt_bbox *bbox,
     memset(bbox, 0, sizeof(*bbox));
 
     for (i = 0; i < len; ++i) {
-        if ((err = load_char(ctx, fnt, txt[i])))
+        if ((err = load_char(dis, fnt, txt[i])))
             return err;
         p = hash_get(fnt->advance, txt[i]);
         bbox->w += p->adv;
@@ -235,12 +248,12 @@ dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
     xcb_render_fill_rectangles(ctx->dis, XCB_RENDER_PICT_OP_SRC, ctx->fill, col, 1, &rect);
 
     for (i = 0; i < len; ++i)
-        if ((err = load_char(ctx, fnt, txt[i])))
+        if ((err = load_char(ctx->dis, fnt, txt[i])))
             return err;
 
     xcb_render_util_composite_text_stream_t* stream = xcb_render_util_composite_text_stream(fnt->gs, len, 0);
     xcb_render_util_glyphs_8(stream, x, y, len, txt);
-    xcb_render_util_composite_text(ctx->dis, XCB_RENDER_PICT_OP_OVER, ctx->fill, ctx->pic, ctx->argb32_format, 0, 0, stream);
+    xcb_render_util_composite_text(ctx->dis, XCB_RENDER_PICT_OP_OVER, ctx->fill, ctx->pic, get_argb32_format(ctx->dis), 0, 0, stream);
     xcb_render_util_composite_text_free(stream);
 
 
@@ -248,7 +261,7 @@ dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
 }
 
 static dt_error
-load_face(dt_context *ctx, FT_Face *face, char const *name) {
+load_face(xcb_connection_t *dis, FT_Library* ft_lib, FT_Face *face, char const *name) {
     dt_error err;
     char *file;
     char *colon;
@@ -259,7 +272,7 @@ load_face(dt_context *ctx, FT_Face *face, char const *name) {
 
     if (!(file = strndup(name, colon - name)))
         return -1;
-    err = FT_New_Face(ctx->ft_lib, file, 0, face);
+    err = FT_New_Face(*ft_lib, file, 0, face);
     free(file);
     if (err)
         return err;
@@ -276,7 +289,7 @@ load_face(dt_context *ctx, FT_Face *face, char const *name) {
 
 
 static dt_error
-load_char(dt_context *ctx, dt_font *fnt, char c)
+load_char(xcb_connection_t* dis, dt_font *fnt, char c)
 {
     dt_error err;
     FT_UInt code;
@@ -323,7 +336,7 @@ load_char(dt_context *ctx, dt_font *fnt, char c)
                 img[4 * (y * g.width + x) + i] =
                     slot->bitmap.buffer[y * g.width + x];
 
-    xcb_render_add_glyphs(ctx->dis, fnt->gs, 1, &gid, &g,
+    xcb_render_add_glyphs(dis, fnt->gs, 1, &gid, &g,
                      4 * g.width * g.height, img);
 
     free(img);

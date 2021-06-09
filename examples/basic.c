@@ -37,8 +37,8 @@ static void draw();
 int main()
 {
     setup_x();
-    assert(!dt_init(&ctx, dis, win));
-    assert(!dt_load(ctx, &fnt, FONT));
+    assert(!dt_init_context(&ctx, dis, win));
+    assert(!dt_load(dis, &fnt, FONT));
     setup_dt();
 
     draw();
@@ -49,8 +49,8 @@ int main()
         free(event);
     }
 
-    dt_free(ctx, fnt);
-    dt_quit(ctx);
+    dt_free_font(dis, fnt);
+    dt_free_context(ctx);
     xcb_disconnect(dis);
 }
 
@@ -90,7 +90,7 @@ static void draw()
 
     assert(!dt_draw(ctx, fnt, &color, 10, 50, TEXT, strlen(TEXT)));
 
-    assert(!dt_box(ctx, fnt, &bbox, TEXT, strlen(TEXT)));
+    assert(!dt_box(dis, fnt, &bbox, TEXT, strlen(TEXT)));
 
     xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 100 + bbox.y, bbox.w, bbox.h}});
     assert(!dt_draw(ctx, fnt, &color_inv, 10, 100, TEXT, strlen(TEXT)));
@@ -103,7 +103,7 @@ static void draw()
     int offset = dt_draw_all_lines(ctx, fnt, &color_inv, 10, 200, 10, buffer, num_lines);
 
     char buffer2[255] = TEXT;
-    num_lines = word_wrap_n(ctx, fnt, buffer2, 1, 400);
+    num_lines = word_wrap_n(dis, fnt, buffer2, 1, 400);
     dt_draw_all_lines(ctx, fnt, &color_inv, 10, offset, 10, buffer2, num_lines);
     xcb_flush(dis);
 }
