@@ -48,10 +48,10 @@ typedef struct dt_font {
     dt_row advance[DT_HASH_SIZE];
 } dt_font;
 
-uint16_t get_font_ascent(dt_font* font) {
+uint16_t dt_get_font_ascent(dt_font* font) {
     return font->ascent;
 }
-uint16_t get_font_height(dt_font* font) {
+uint16_t dt_get_font_height(dt_font* font) {
     return font->height;
 }
 
@@ -309,7 +309,7 @@ void dt_free_font(xcb_connection_t *dis, dt_font *fnt) {
     free(fnt);
 }
 
-int get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) {
+int dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) {
     uint32_t text_width = 0;
     for (int i = 0; i < len; ++i) {
         if ((load_char(dis, fnt, txt[i])))
@@ -318,6 +318,7 @@ int get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t 
     }
     return text_width;
 }
+
 dt_error dt_box(xcb_connection_t* dis, dt_font *fnt, dt_bbox *bbox,
        char const *txt, size_t len) {
     dt_error err;

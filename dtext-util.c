@@ -17,7 +17,7 @@ int split_lines(char *txt) {
 int word_wrap_n(xcb_connection_t*dis , dt_font *fnt, char *txt, int num_lines, uint32_t width) {
     char*ptr = txt;
     for(int i=0;i<num_lines;i++) {
-        if(get_text_width(dis, fnt, ptr, strlen(ptr)) > width) {
+        if(dt_get_text_width(dis, fnt, ptr, strlen(ptr)) > width) {
             char* whitespace = ptr;
             char* space = NULL;
             while(whitespace) {
@@ -25,7 +25,7 @@ int word_wrap_n(xcb_connection_t*dis , dt_font *fnt, char *txt, int num_lines, u
                 if(!space)
                     break;
                 int sublen = space - ptr;
-                if(get_text_width(dis, fnt, ptr, sublen) > width)
+                if(dt_get_text_width(dis, fnt, ptr, sublen) > width)
                     break;
                 whitespace = space;
             }
@@ -43,14 +43,14 @@ int word_wrap_n(xcb_connection_t*dis , dt_font *fnt, char *txt, int num_lines, u
     return num_lines;
 }
 
-int word_wrap_line(xcb_connection_t*dis, dt_font *fnt, char *txt, uint32_t width) {
+int dt_word_wrap_line(xcb_connection_t*dis, dt_font *fnt, char *txt, uint32_t width) {
     return word_wrap_n(dis, fnt, txt, split_lines(txt), width);
 }
 
 int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
         uint32_t x, uint32_t starting_y, uint32_t padding, char const *lines, int num_lines) {
 
-    int cell_height = padding + get_font_ascent(fnt);
+    int cell_height = padding + dt_get_font_ascent(fnt);
     const char*ptr = lines;
     for(int i=0;i<num_lines;i++) {
         dt_draw(ctx, fnt, color, x, starting_y + cell_height * (i+1), ptr, strlen(ptr));

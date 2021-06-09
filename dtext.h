@@ -25,8 +25,8 @@ typedef struct {
 	uint8_t alpha; // 0 means opaque
 } dt_color;
 
-uint16_t get_font_ascent(dt_font* font);
-uint16_t get_font_height(dt_font* font);
+uint16_t dt_get_font_ascent(dt_font* font);
+uint16_t dt_get_font_height(dt_font* font);
 
 dt_error dt_init_context(dt_context **ctx, xcb_connection_t *dpy, xcb_window_t win);
 void dt_free_context(dt_context *ctx);
@@ -39,7 +39,7 @@ dt_error dt_box(xcb_connection_t *dis, dt_font *fnt, dt_bbox *bbox,
 dt_error dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
                  uint32_t x, uint32_t y, char const *txt, size_t len);
 
-int get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) ;
+int dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) ;
 
 /**
  * Splits txt into N lines by by total length
@@ -47,7 +47,7 @@ int get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t 
  * Breaks up text into N lines such that strings are generally less than width pixels
  * @return N, the new number of strings
  */
-int word_wrap_n(xcb_connection_t* dis, dt_font *fnt, char *txt, int num_lines, uint32_t width);
+int dt_word_wrap_n(xcb_connection_t* dis, dt_font *fnt, char *txt, int num_lines, uint32_t width);
 
 /**
  * Replace all instances of '\n' with \0.
@@ -56,7 +56,7 @@ int word_wrap_n(xcb_connection_t* dis, dt_font *fnt, char *txt, int num_lines, u
  * with the null string.
  * @return N, the new number of strings
  */
-int split_lines(char *txt);
+int dt_split_lines(char *txt);
 
 /**
  * Splits txt into N lines by '\n' and by total length
@@ -65,7 +65,7 @@ int split_lines(char *txt);
  * and string are generally less than width pixels
  * @return N, the new number of strings
  */
-int word_wrap_line(xcb_connection_t*dis, dt_font *fnt, char *txt, uint32_t width);
+int dt_word_wrap_line(xcb_connection_t*dis, dt_font *fnt, char *txt, uint32_t width);
 
 int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
         uint32_t x, uint32_t starting_y, uint32_t padding, char const *lines, int num_lines);

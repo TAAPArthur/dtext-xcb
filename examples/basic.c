@@ -67,15 +67,15 @@ static void draw() {
     xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 100 + bbox.y, bbox.w, bbox.h}});
     assert(!dt_draw(ctx, fnt, &color_inv, 10, 100, TEXT, strlen(TEXT)));
 
-    xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 150 - get_font_ascent(fnt), bbox.w, get_font_height(fnt)}});
+    xcb_poly_fill_rectangle(dis, win, gc, 1, (xcb_rectangle_t[1]){{10 + bbox.x, 150 - dt_get_font_ascent(fnt), bbox.w, dt_get_font_height(fnt)}});
     assert(!dt_draw(ctx, fnt, &color_inv, 10, 150, TEXT, strlen(TEXT)));
 
     char buffer[32] = TEXT2;
-    int num_lines = split_lines(buffer);
+    int num_lines = dt_split_lines(buffer);
     int offset = dt_draw_all_lines(ctx, fnt, &color_inv, 10, 200, 10, buffer, num_lines);
 
     char buffer2[255] = TEXT;
-    num_lines = word_wrap_n(dis, fnt, buffer2, 1, 400);
+    num_lines = dt_word_wrap_n(dis, fnt, buffer2, 1, 400);
     dt_draw_all_lines(ctx, fnt, &color_inv, 10, offset, 10, buffer2, num_lines);
     xcb_flush(dis);
 }
