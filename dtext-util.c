@@ -1,7 +1,6 @@
 #include <string.h>
 #include "dtext.h"
 
-
 int split_lines(char *txt) {
     char* ptr = txt;
     int num_lines;

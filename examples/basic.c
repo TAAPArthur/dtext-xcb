@@ -24,38 +24,12 @@ xcb_window_t root;
 xcb_window_t win;
 xcb_gcontext_t gc;
 
-
 dt_context *ctx;
 dt_font *fnt;
 dt_color color;
 dt_color color_inv;
 
-static void setup_x();
-static void setup_dt();
-static void draw();
-
-int main()
-{
-    setup_x();
-    assert(!dt_init_context(&ctx, dis, win));
-    assert(!dt_load(dis, &fnt, FONT));
-    setup_dt();
-
-    draw();
-
-    xcb_generic_event_t* event;
-    while((event=xcb_wait_for_event(dis))) {
-        draw();
-        free(event);
-    }
-
-    dt_free_font(dis, fnt);
-    dt_free_context(ctx);
-    xcb_disconnect(dis);
-}
-
-static void setup_x()
-{
+static void setup_x() {
     dis = xcb_connect(NULL, NULL);
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator (xcb_get_setup (dis));
     xcb_screen_t* screen = iter.data;
@@ -72,8 +46,7 @@ static void setup_x()
     xcb_create_gc (dis, gc, win, XCB_GC_FOREGROUND, &screen->white_pixel);
 }
 
-static void setup_dt()
-{
+static void setup_dt() {
     memset(&color, 0, sizeof(color));
     color.blue = 0xFF;
     color.alpha = 0xFF;
@@ -84,8 +57,7 @@ static void setup_dt()
     color_inv.alpha = 0xFF;
 }
 
-static void draw()
-{
+static void draw() {
     dt_bbox bbox;
 
     assert(!dt_draw(ctx, fnt, &color, 10, 50, TEXT, strlen(TEXT)));
@@ -106,4 +78,23 @@ static void draw()
     num_lines = word_wrap_n(dis, fnt, buffer2, 1, 400);
     dt_draw_all_lines(ctx, fnt, &color_inv, 10, offset, 10, buffer2, num_lines);
     xcb_flush(dis);
+}
+
+int main() {
+    setup_x();
+    assert(!dt_init_context(&ctx, dis, win));
+    assert(!dt_load(dis, &fnt, FONT));
+    setup_dt();
+
+    draw();
+
+    xcb_generic_event_t* event;
+    while((event=xcb_wait_for_event(dis))) {
+        draw();
+        free(event);
+    }
+
+    dt_free_font(dis, fnt);
+    dt_free_context(ctx);
+    xcb_disconnect(dis);
 }
