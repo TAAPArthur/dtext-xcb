@@ -16,7 +16,8 @@
 #define TEXT "The quick brown fox jumps over the lazy dog. "
 #define TEXT2 "AAA\nBB\nC\nDD\nEEE\nFFFF"
 //#define FONT "/usr/share/fonts/fantasque-sans-mono/FantasqueSansMono-Regular.otf:16"
-#define FONT "/usr/share/fonts/TTF/LiberationMono-Regular.ttf:48"
+#define FONT "/usr/share/fonts/TTF/LiberationMono-Regular.ttf"
+#define FONT_SIZE 48
 //#define FONT "/usr/share/fonts/libertine/LinLibertine_R.otf:16"
 
 xcb_connection_t *dis;
@@ -83,7 +84,7 @@ static void draw() {
 int main() {
     setup_x();
     assert(!dt_init_context(&ctx, dis, win));
-    assert(!dt_load_font(dis, &fnt, FONT));
+    assert(!dt_load_font(dis, &fnt, FONT, FONT_SIZE));
     setup_dt();
 
     draw();

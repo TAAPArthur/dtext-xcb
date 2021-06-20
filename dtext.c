@@ -167,24 +167,12 @@ static dt_error load_char(xcb_connection_t* dis, dt_font *fnt, char c) {
     });
 }
 
-static dt_error load_face(xcb_connection_t *dis, FT_Library* ft_lib, FT_Face *face, char const *name) {
+static dt_error load_face(FT_Library* ft_lib, FT_Face *face, char const *file, int size) {
     dt_error err;
-    char *file;
-    char *colon;
-    size_t size;
-
-    if (!(colon = strchr(name, ':')))
-        return -1;
-
-    if (!(file = strndup(name, colon - name)))
-        return -1;
     err = FT_New_Face(*ft_lib, file, 0, face);
-    free(file);
     if (err)
         return err;
 
-    name = colon + 1;
-    size = strtoul(name, 0, 10);
     if ((err = FT_Set_Char_Size(*face, size << 6, 0, 0, 0))) {
         FT_Done_Face(*face);
         return err;
@@ -194,7 +182,6 @@ static dt_error load_face(xcb_connection_t *dis, FT_Library* ft_lib, FT_Face *fa
 }
 
 dt_error dt_init_context(dt_context **res, xcb_connection_t *dis, xcb_window_t win) {
-    dt_error err;
     dt_context *ctx;
     xcb_visualid_t visual;
     xcb_pixmap_t pix;
@@ -239,12 +226,10 @@ void dt_free_context(dt_context *ctx) {
     free(ctx);
 }
 
-dt_error dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name) {
+dt_error dt_load_fonts(xcb_connection_t *dis, dt_font **res, char const *name, int n, int size) {
     dt_error err;
     dt_font *fnt;
     size_t i;
-    size_t len;
-    char *face;
     int16_t descent;
 
     if (!(fnt = malloc(sizeof(*fnt))))
@@ -255,28 +240,22 @@ dt_error dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name) {
         return err;
     }
 
-    fnt->num_faces = 1;
-    for (i = 0; name[i]; ++i)
-        fnt->num_faces += (name[i] == ';');
+    fnt->num_faces = n;
 
     if (!(fnt->faces = malloc(fnt->num_faces * sizeof(fnt->faces[0])))) {
         free(fnt);
         return -1;
     }
+
     for (i = 0; i < fnt->num_faces; ++i) {
-        len = strchr(name, ';') - name;
-        if (!(face = strndup(name, len)))
-            return -1;
-        if ((err = load_face(dis, &fnt->ft_lib, &fnt->faces[i], face))) {
-            free(face);
+        if ((err = load_face(&fnt->ft_lib, &fnt->faces[i], name, size))) {
             while (--i != (size_t) -1)
                 FT_Done_Face(fnt->faces[i]);
             free(fnt->faces);
             free(fnt);
             return err;
         }
-        free(face);
-        name += len + 1;
+        name += strlen(name) + 1;
     }
 
 
@@ -295,6 +274,10 @@ dt_error dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name) {
     return 0;
 }
 
+dt_error dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name, int size) {
+    return dt_load_fonts(dis, res, name, 1, size);
+}
+
 
 void dt_free_font(xcb_connection_t *dis, dt_font *fnt) {
     size_t i;
@@ -309,7 +292,7 @@ void dt_free_font(xcb_connection_t *dis, dt_font *fnt) {
     free(fnt);
 }
 
-int dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) {
+uint16_t dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) {
     uint32_t text_width = 0;
     for (int i = 0; i < len; ++i) {
         if ((load_char(dis, fnt, txt[i])))
@@ -340,7 +323,7 @@ dt_error dt_box(xcb_connection_t* dis, dt_font *fnt, dt_bbox *bbox,
 }
 
 dt_error dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
-        uint32_t x, uint32_t y, char const *txt, size_t len) {
+        uint32_t x, uint32_t y, const char *txt, size_t len) {
     dt_error err;
     xcb_render_color_t col;
     size_t i;

@@ -31,7 +31,8 @@ uint16_t dt_get_font_height(dt_font* font);
 dt_error dt_init_context(dt_context **ctx, xcb_connection_t *dpy, xcb_window_t win);
 void dt_free_context(dt_context *ctx);
 
-dt_error dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name);
+dt_error dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name, int size);
+dt_error dt_load_fonts(xcb_connection_t *dis, dt_font **res, char const *name, int n, int size);
 void dt_free_font(xcb_connection_t *dis, dt_font *fnt);
 
 dt_error dt_box(xcb_connection_t *dis, dt_font *fnt, dt_bbox *bbox,
