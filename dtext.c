@@ -14,12 +14,12 @@
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-typedef struct dt_context {
+struct dt_context {
     xcb_connection_t* dis;
     xcb_render_pictformat_t win_format;
     xcb_render_picture_t pic;
     xcb_render_picture_t fill;
-} dt_context;
+};
 
 typedef struct {
     uint8_t c;  // char
@@ -36,7 +36,7 @@ typedef struct {
 
 
 #define DT_HASH_SIZE 128
-typedef struct dt_font {
+struct dt_font {
     uint16_t height;
     uint16_t ascent;
 
@@ -46,7 +46,7 @@ typedef struct dt_font {
 
     xcb_render_glyphset_t gs;
     dt_row advance[DT_HASH_SIZE];
-} dt_font;
+};
 
 uint16_t dt_get_font_ascent(dt_font* font) {
     return font->ascent;
@@ -155,7 +155,7 @@ static dt_error load_char(xcb_connection_t* dis, dt_font *fnt, char c) {
                     slot->bitmap.buffer[y * g.width + x];
 
     xcb_render_add_glyphs(dis, fnt->gs, 1, &gid, &g,
-                     4 * g.width * g.height, img);
+                     4 * g.width * g.height, (uint8_t*) img);
 
     free(img);
 
@@ -357,7 +357,7 @@ dt_error dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
             return err;
 
     xcb_render_util_composite_text_stream_t* stream = xcb_render_util_composite_text_stream(fnt->gs, len, 0);
-    xcb_render_util_glyphs_8(stream, x, y, len, txt);
+    xcb_render_util_glyphs_8(stream, x, y, len, (uint8_t*) txt);
     xcb_render_util_composite_text(ctx->dis, XCB_RENDER_PICT_OP_OVER, ctx->fill, ctx->pic, get_argb32_format(ctx->dis), 0, 0, stream);
     xcb_render_util_composite_text_free(stream);
 

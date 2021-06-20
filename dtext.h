@@ -39,7 +39,7 @@ dt_error dt_box(xcb_connection_t *dis, dt_font *fnt, dt_bbox *bbox,
 dt_error dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
                  uint32_t x, uint32_t y, char const *txt, size_t len);
 
-int dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) ;
+uint16_t dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) ;
 
 /**
  * Splits txt into N lines by by total length
