@@ -67,7 +67,7 @@ xcb_render_pictformat_t get_argb32_format(xcb_connection_t* dis) {
     return argb32_format;
 }
 
-static dt_pair const * hash_get(dt_row map[DT_HASH_SIZE], char key) {
+static dt_pair const * hash_get(dt_row map[DT_HASH_SIZE], uint8_t key) {
     dt_row row;
     size_t i;
 
