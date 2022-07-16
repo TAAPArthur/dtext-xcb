@@ -353,7 +353,6 @@ dt_font* dt_load_font(xcb_connection_t *dis, char const *name, int size) {
         return NULL;
     }
 
-    char buffer[255];
     do {
         char* end = strchr(name, ';');
         if (dt_find_and_load_dir(&fnt->ft_lib, &fnt->faces[0], name, end - name, size) == 0) {
