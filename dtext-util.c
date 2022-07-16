@@ -47,7 +47,7 @@ int dt_word_wrap_line(xcb_connection_t*dis, dt_font *fnt, char *txt, uint32_t wi
     return word_wrap_n(dis, fnt, txt, split_lines(txt), width);
 }
 
-int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
+int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, uint32_t color,
         uint32_t x, uint32_t starting_y, uint32_t padding, char const *lines, int num_lines) {
 
     int cell_height = padding + dt_get_font_ascent(fnt);

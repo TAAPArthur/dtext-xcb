@@ -9,13 +9,6 @@
 typedef struct dt_context dt_context;
 typedef struct dt_font dt_font;
 
-typedef struct {
-	uint8_t red;
-	uint8_t green;
-	uint8_t blue;
-	uint8_t alpha; // 0 means opaque
-} dt_color;
-
 /**
  * returns the height of the highest character of the font, relative to the baseline
  */
@@ -43,7 +36,7 @@ void dt_free_font(xcb_connection_t *dis, dt_font *fnt);
  * drawn with font `fnt`, in color `color`, with the baseline starting at position
  * x, y.
  */
-int dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
+int dt_draw(dt_context *ctx, dt_font *fnt, uint32_t color,
                  uint32_t x, uint32_t y, char const *txt, size_t len);
 
 /**
@@ -80,6 +73,6 @@ int dt_word_wrap_line(xcb_connection_t*dis, dt_font *fnt, char *txt, uint32_t wi
 /**
  * Calls dt_draw for each line such that each line is drawn right after each other
  */
-int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
+int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, uint32_t color,
         uint32_t x, uint32_t starting_y, uint32_t padding, char const *lines, int num_lines);
 #endif
