@@ -84,6 +84,17 @@ int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, uint32_t color,
 
 #ifdef DTEXT_XCB_IMPLEMENTATION
 
+#ifndef DTEXT_DEFAULT_SYS_FONT_PATH
+#define DTEXT_DEFAULT_SYS_FONT_PATH "/usr/share/fonts/"
+#endif
+
+#ifndef DTEXT_CHECK_SUBDIRS
+#define DTEXT_CHECK_SUBDIRS 1
+#endif
+#if DTEXT_CHECK_SUBDIRS
+#include <dirent.h>
+#endif
+
 #include <string.h>
 #include <freetype2/ft2build.h>
 #include <xcb/render.h>
@@ -262,6 +273,30 @@ static int dt_load_face(FT_Library* ft_lib, FT_Face *face, char const *file, int
     return 0;
 }
 
+static int dt_find_and_load_dir(FT_Library* ft_lib, FT_Face *face, char const *name, int str_len, int size) {
+    if (name[0] == '/') {
+        return dt_load_face(ft_lib, face, name, size);
+    }
+    char buffer[255];
+#if DTEXT_CHECK_SUBDIRS
+    DIR* d = opendir(DTEXT_DEFAULT_SYS_FONT_PATH);
+    if (!d)
+        return -1;
+    struct dirent * dir;
+    while ((dir = readdir(d)) != NULL) {
+        if (dir->d_name[0] == '.' && dir->d_name[1] == '.')
+            continue;
+        snprintf(buffer, sizeof(buffer), DTEXT_DEFAULT_SYS_FONT_PATH "/%s/%.*s", dir->d_name, str_len, name);
+        if (dt_load_face(ft_lib, face, buffer, size) == 0) {
+            return 0;
+        }
+    }
+    closedir(d);
+#endif
+    snprintf(buffer, sizeof(buffer), DTEXT_DEFAULT_SYS_FONT_PATH "/%.*s", str_len, name);
+    return -1;
+}
+
 dt_context* dt_create_context(xcb_connection_t *dis, xcb_window_t win) {
     dt_context *ctx;
     xcb_pixmap_t pix;
@@ -302,43 +337,37 @@ void dt_free_context(dt_context *ctx) {
 
 dt_font* dt_load_font(xcb_connection_t *dis, char const *name, int size) {
     dt_font *fnt;
-    // load a single family
-    const int n = 1;
-    size_t i;
     int16_t descent;
 
     if (!(fnt = malloc(sizeof(*fnt))))
         return NULL;
+    fnt->num_faces = 1;
 
     if (FT_Init_FreeType(&fnt->ft_lib)) {
         free(fnt);
         return NULL;
     }
 
-    fnt->num_faces = n;
-
     if (!(fnt->faces = malloc(fnt->num_faces * sizeof(fnt->faces[0])))) {
         free(fnt);
         return NULL;
     }
 
-    for (i = 0; i < fnt->num_faces; ++i) {
-        if (dt_load_face(&fnt->ft_lib, &fnt->faces[i], name, size)) {
-            while (--i != (size_t) -1)
-                FT_Done_Face(fnt->faces[i]);
-            free(fnt->faces);
-            free(fnt);
-            return NULL;
+    char buffer[255];
+    do {
+        char* end = strchr(name, ';');
+        if (dt_find_and_load_dir(&fnt->ft_lib, &fnt->faces[0], name, end - name, size) == 0) {
+            break;
         }
-        name += strlen(name) + 1;
-    }
+        name = end + 1;
+    } while (name && name[0]);
 
     fnt->gs = xcb_generate_id(dis);
     xcb_render_create_glyph_set(dis, fnt->gs, get_argb32_format(dis));
     memset(fnt->advance, 0, sizeof(fnt->advance));
 
     fnt->ascent = descent = 0;
-    for (i = 0; i < fnt->num_faces; ++i) {
+    for (size_t i = 0; i < fnt->num_faces; ++i) {
         fnt->ascent = DTEXT_XCB_MAX(fnt->ascent, fnt->faces[i]->ascender >> 6);
         descent = DTEXT_XCB_MIN(descent, fnt->faces[i]->descender >> 6);
     }
