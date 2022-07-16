@@ -4,19 +4,10 @@
 
 #include <stdint.h>
 #include <xcb/xcb.h>
-typedef int32_t dt_error;
 
 
 typedef struct dt_context dt_context;
 typedef struct dt_font dt_font;
-
-typedef struct {
-	int32_t x; // Bottom-left of box, relative to point of origin of text
-	int32_t y;
-
-	uint32_t w;
-	uint32_t h;
-} dt_bbox;
 
 typedef struct {
 	uint8_t red;
@@ -25,21 +16,39 @@ typedef struct {
 	uint8_t alpha; // 0 means opaque
 } dt_color;
 
+/**
+ * returns the height of the highest character of the font, relative to the baseline
+ */
 uint16_t dt_get_font_ascent(dt_font* font);
+/**
+ * returns the total height of the highest character in the font.
+ */
 uint16_t dt_get_font_height(dt_font* font);
 
-dt_error dt_init_context(dt_context **ctx, xcb_connection_t *dpy, xcb_window_t win);
+/*
+ * Allocates a new context and stores the result in ctx
+ */
+int dt_init_context(dt_context **ctx, xcb_connection_t *dpy, xcb_window_t win);
+/**
+ * Frees an allocated context
+ */
 void dt_free_context(dt_context *ctx);
 
-dt_error dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name, int size);
-dt_error dt_load_fonts(xcb_connection_t *dis, dt_font **res, char const *name, int n, int size);
+int dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name, int size);
+int dt_load_fonts(xcb_connection_t *dis, dt_font **res, char const *name, int n, int size);
 void dt_free_font(xcb_connection_t *dis, dt_font *fnt);
 
-dt_error dt_box(xcb_connection_t *dis, dt_font *fnt, dt_bbox *bbox,
-                char const *txt, size_t len);
-dt_error dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
+/**
+ * draws the string composed of the first `len` characters of `txt`,
+ * drawn with font `fnt`, in color `color`, with the baseline starting at position
+ * x, y.
+ */
+int dt_draw(dt_context *ctx, dt_font *fnt, dt_color const *color,
                  uint32_t x, uint32_t y, char const *txt, size_t len);
 
+/**
+ * Returns the width in pixels that the specified text will take when drawn
+ */
 uint16_t dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) ;
 
 /**
@@ -68,6 +77,9 @@ int dt_split_lines(char *txt);
  */
 int dt_word_wrap_line(xcb_connection_t*dis, dt_font *fnt, char *txt, uint32_t width);
 
+/**
+ * Calls dt_draw for each line such that each line is drawn right after each other
+ */
 int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
         uint32_t x, uint32_t starting_y, uint32_t padding, char const *lines, int num_lines);
 #endif

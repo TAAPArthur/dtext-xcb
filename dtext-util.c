@@ -1,12 +1,12 @@
-#include <string.h>
 #include "dtext.h"
+#include <string.h>
 
 int split_lines(char *txt) {
     char* ptr = txt;
     int num_lines;
-    for(num_lines = 0; ptr; num_lines++) {
+    for (num_lines = 0; ptr; num_lines++) {
         ptr = strstr(ptr, "\n");
-        if(ptr) {
+        if (ptr) {
             *ptr = 0;
             ptr++;
         }
@@ -16,24 +16,24 @@ int split_lines(char *txt) {
 
 int word_wrap_n(xcb_connection_t*dis , dt_font *fnt, char *txt, int num_lines, uint32_t width) {
     char*ptr = txt;
-    for(int i=0;i<num_lines;i++) {
-        if(dt_get_text_width(dis, fnt, ptr, strlen(ptr)) > width) {
+    for (int i = 0; i < num_lines; i++) {
+        if (dt_get_text_width(dis, fnt, ptr, strlen(ptr)) > width) {
             char* whitespace = ptr;
             char* space = NULL;
-            while(whitespace) {
+            while (whitespace) {
                 space = strstr(whitespace + 1, " ");
-                if(!space)
+                if (!space)
                     break;
                 int sublen = space - ptr;
-                if(dt_get_text_width(dis, fnt, ptr, sublen) > width)
+                if (dt_get_text_width(dis, fnt, ptr, sublen) > width)
                     break;
                 whitespace = space;
             }
-            if(whitespace != ptr) {
+            if (whitespace != ptr) {
                 *whitespace = 0;
                 num_lines++;
             }
-            else if(space) {
+            else if (space) {
                 *space = 0;
                 num_lines++;
             }
@@ -52,8 +52,8 @@ int dt_draw_all_lines(dt_context *ctx, dt_font *fnt, dt_color const *color,
 
     int cell_height = padding + dt_get_font_ascent(fnt);
     const char*ptr = lines;
-    for(int i=0;i<num_lines;i++) {
-        dt_draw(ctx, fnt, color, x, starting_y + cell_height * (i+1), ptr, strlen(ptr));
+    for (int i = 0; i < num_lines; i++) {
+        dt_draw(ctx, fnt, color, x, starting_y + cell_height * (i + 1), ptr, strlen(ptr));
         ptr = ptr + strlen(ptr) + 1;
     }
     return starting_y + cell_height * num_lines;
