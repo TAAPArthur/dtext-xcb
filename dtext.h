@@ -21,14 +21,13 @@ uint16_t dt_get_font_height(dt_font* font);
 /*
  * Allocates a new context and stores the result in ctx
  */
-int dt_init_context(dt_context **ctx, xcb_connection_t *dpy, xcb_window_t win);
+dt_context* dt_create_context(xcb_connection_t *dpy, xcb_window_t win);
 /**
  * Frees an allocated context
  */
 void dt_free_context(dt_context *ctx);
 
-int dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name, int size);
-int dt_load_fonts(xcb_connection_t *dis, dt_font **res, char const *name, int n, int size);
+dt_font* dt_load_font(xcb_connection_t *dis, char const *name, int size);
 void dt_free_font(xcb_connection_t *dis, dt_font *fnt);
 
 /**

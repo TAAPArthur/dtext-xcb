@@ -181,12 +181,12 @@ static int load_face(FT_Library* ft_lib, FT_Face *face, char const *file, int si
     return 0;
 }
 
-int dt_init_context(dt_context **res, xcb_connection_t *dis, xcb_window_t win) {
+dt_context* dt_create_context(xcb_connection_t *dis, xcb_window_t win) {
     dt_context *ctx;
     xcb_pixmap_t pix;
 
     if (!(ctx = malloc(sizeof(*ctx))))
-        return -1;
+        return NULL;
 
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator (xcb_get_setup (dis));
     xcb_screen_t* screen = iter.data;
@@ -210,8 +210,7 @@ int dt_init_context(dt_context **res, xcb_connection_t *dis, xcb_window_t win) {
     xcb_render_create_picture(dis, ctx->fill, pix, get_argb32_format(dis), XCB_RENDER_CP_REPEAT, &values);
     xcb_free_pixmap(dis, pix);
 
-    *res = ctx;
-    return 0;
+    return ctx;
 }
 
 void dt_free_context(dt_context *ctx) {
@@ -220,38 +219,38 @@ void dt_free_context(dt_context *ctx) {
     free(ctx);
 }
 
-int dt_load_fonts(xcb_connection_t *dis, dt_font **res, char const *name, int n, int size) {
-    dt_error err;
+dt_font* dt_load_font(xcb_connection_t *dis, char const *name, int size) {
     dt_font *fnt;
+    // load a single family
+    const int n = 1;
     size_t i;
     int16_t descent;
 
     if (!(fnt = malloc(sizeof(*fnt))))
-        return -1;
+        return NULL;
 
-    if ((err = FT_Init_FreeType(&fnt->ft_lib))) {
+    if (FT_Init_FreeType(&fnt->ft_lib)) {
         free(fnt);
-        return err;
+        return NULL;
     }
 
     fnt->num_faces = n;
 
     if (!(fnt->faces = malloc(fnt->num_faces * sizeof(fnt->faces[0])))) {
         free(fnt);
-        return -1;
+        return NULL;
     }
 
     for (i = 0; i < fnt->num_faces; ++i) {
-        if ((err = load_face(&fnt->ft_lib, &fnt->faces[i], name, size))) {
+        if (load_face(&fnt->ft_lib, &fnt->faces[i], name, size)) {
             while (--i != (size_t) -1)
                 FT_Done_Face(fnt->faces[i]);
             free(fnt->faces);
             free(fnt);
-            return err;
+            return NULL;
         }
         name += strlen(name) + 1;
     }
-
 
     fnt->gs = xcb_generate_id(dis);
     xcb_render_create_glyph_set(dis, fnt->gs, get_argb32_format(dis));
@@ -264,12 +263,7 @@ int dt_load_fonts(xcb_connection_t *dis, dt_font **res, char const *name, int n,
     }
     fnt->height = fnt->ascent - descent;
 
-    *res = fnt;
-    return 0;
-}
-
-int dt_load_font(xcb_connection_t *dis, dt_font **res, char const *name, int size) {
-    return dt_load_fonts(dis, res, name, 1, size);
+    return fnt;
 }
 
 uint16_t dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt, size_t len) {
@@ -301,7 +295,7 @@ int dt_draw(dt_context *ctx, dt_font *fnt, uint32_t color,
     int err;
     xcb_render_color_t col;
     size_t i;
-    dt_color* c = &color;
+    dt_color* c = (dt_color*)&color;
 
     col.red   = (c->red   << 8) + c->red;
     col.green = (c->green << 8) + c->green;
