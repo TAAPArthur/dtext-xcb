@@ -365,23 +365,17 @@ void dt_free_font(xcb_connection_t *dis, dt_font *fnt) {
     free(fnt);
 }
 
-typedef struct {
-	uint8_t red;
-	uint8_t green;
-	uint8_t blue;
-	uint8_t alpha;
-} dt_color;
 int dt_draw(dt_context *ctx, dt_font *fnt, uint32_t color,
         uint32_t x, uint32_t y, const char *txt, size_t len) {
     int err;
     xcb_render_color_t col;
     size_t i;
-    dt_color* c = (dt_color*)&color;
+    uint8_t * c = (uint8_t*)&color;
 
-    col.red   = (c->red   << 8) + c->red;
-    col.green = (c->green << 8) + c->green;
-    col.blue  = (c->blue  << 8) + c->blue;
-    col.alpha = (c->alpha << 8) + c->alpha;
+    col.blue  = (c[0] << 8);
+    col.green = (c[1] << 8);
+    col.red   = (c[2] << 8);
+    col.alpha = (c[3] << 8);
     xcb_rectangle_t rect ={0, 0, 1, 1};
     xcb_render_fill_rectangles(ctx->dis, XCB_RENDER_PICT_OP_SRC, ctx->fill, col, 1, &rect);
 
