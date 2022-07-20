@@ -335,11 +335,24 @@ void dt_free_context(dt_context *ctx) {
     free(ctx);
 }
 
+static int dt_load_font_helper(dt_font *fnt, char const *name, int size) {
+    while(1) {
+        char* end = strchr(name, ';');
+        int len = end ? end - name: strlen(name);
+        if (dt_find_and_load_dir(&fnt->ft_lib, &fnt->faces[0], name, len, size) == 0) {
+            return 0;
+        }
+        if(!end) {
+            return -1;
+        }
+        name = end + 1;
+    }
+}
 dt_font* dt_load_font(xcb_connection_t *dis, char const *name, int size) {
     dt_font *fnt;
     int16_t descent;
 
-    if (!(fnt = malloc(sizeof(*fnt))))
+    if (!(fnt = calloc(1, sizeof(*fnt))))
         return NULL;
     fnt->num_faces = 1;
 
@@ -353,13 +366,10 @@ dt_font* dt_load_font(xcb_connection_t *dis, char const *name, int size) {
         return NULL;
     }
 
-    do {
-        char* end = strchr(name, ';');
-        if (dt_find_and_load_dir(&fnt->ft_lib, &fnt->faces[0], name, end - name, size) == 0) {
-            break;
-        }
-        name = end + 1;
-    } while (name && name[0]);
+    if(dt_load_font_helper(fnt, name, size)) {
+        dt_free_font(dis, fnt);
+        return NULL;
+    }
 
     fnt->gs = xcb_generate_id(dis);
     xcb_render_create_glyph_set(dis, fnt->gs, get_argb32_format(dis));
@@ -386,10 +396,16 @@ uint16_t dt_get_text_width(xcb_connection_t* dis, dt_font *fnt, char const *txt,
 }
 
 void dt_free_font(xcb_connection_t *dis, dt_font *fnt) {
-    xcb_render_free_glyph_set(dis, fnt->gs);
+    if (fnt->gs) {
+        xcb_render_free_glyph_set(dis, fnt->gs);
+    }
     for (size_t i = 0; i < fnt->num_faces; ++i)
-        FT_Done_Face(fnt->faces[i]);
-    FT_Done_FreeType(fnt->ft_lib);
+        if(fnt->faces[i]) {
+            FT_Done_Face(fnt->faces[i]);
+        }
+    if(fnt->ft_lib) {
+        FT_Done_FreeType(fnt->ft_lib);
+    }
     free(fnt);
 }
 
